@@ -5,13 +5,17 @@
  */
 package com.controle.screen;
 
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import javax.swing.JOptionPane;
@@ -22,20 +26,19 @@ import javax.swing.JOptionPane;
  */
 public class NetworkConfig extends javax.swing.JFrame {
 
-    /**
-     * Creates new form NetworkConfig
-     */
+    Connection conexao = null;
+    PreparedStatement pst = null;
+    ResultSet rs = null;
+
     public NetworkConfig() {
         initComponents();
-
+        loadServerConfig();
     }
 
-    // Método para obter os valores dos campos de texto e usar para conectar ao
-    // banco de dados
+    // Método para obter os valores dos campos de texto e usar para conectar ao banco de dados
     public static Connection conector() {
         // Verifica se os campos de texto foram inicializados
         if (txtIp1 == null || txtIp2 == null || txtIp3 == null || txtIp4 == null) {
-            JOptionPane.showMessageDialog(null, "Os campos de IP não foram inicializados corretamente.");
             return null;
         }
 
@@ -51,8 +54,10 @@ public class NetworkConfig extends javax.swing.JFrame {
         try {
             Class.forName(driver);
             conexao = DriverManager.getConnection(url, user, password);
+
             // Salva o IP do servidor no arquivo de configuração
             saveServerIp(ip);
+
             return conexao;
         } catch (ClassNotFoundException e) {
             System.out.println("Driver JDBC não encontrado: " + e);
@@ -66,7 +71,7 @@ public class NetworkConfig extends javax.swing.JFrame {
     // Método para salvar o IP do servidor em um arquivo de configuração
     private static void saveServerIp(String ip) {
         try (FileOutputStream fileOut = new FileOutputStream("server_config.dat");
-                ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
+             ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
             out.writeObject(new ServerConfig(ip));
         } catch (IOException e) {
             // Tratamento para erros de I/O ao salvar o arquivo de configuração
@@ -74,9 +79,28 @@ public class NetworkConfig extends javax.swing.JFrame {
         }
     }
 
+    // Método para carregar as configurações do servidor
+    private static void loadServerConfig() {
+        try (FileInputStream fileIn = new FileInputStream("server_config.dat");
+             ObjectInputStream in = new ObjectInputStream(fileIn)) {
+            ServerConfig config = (ServerConfig) in.readObject();
+            String[] ipParts = config.getIp().split("\\.");
+            if (ipParts.length == 4) {
+                txtIp1.setText(ipParts[0]);
+                txtIp2.setText(ipParts[1]);
+                txtIp3.setText(ipParts[2]);
+                txtIp4.setText(ipParts[3]);
+            } else {
+                throw new IOException("Configuração de IP inválida.");
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            // Tratamento para erros de I/O ao carregar o arquivo de configuração
+            e.printStackTrace();
+        }
+    }
+
     // Classe auxiliar para armazenar a configuração do servidor
     static class ServerConfig implements Serializable {
-
         private static final long serialVersionUID = 1L;
         private String ip;
 
@@ -93,20 +117,20 @@ public class NetworkConfig extends javax.swing.JFrame {
         }
     }
 
-    // Evento do botão "Salvar"
     // Evento do botão "Cancelar"
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {
-        this.dispose(); // Fecha a janela
+    private void cancelar() {
+        int opc = JOptionPane.showConfirmDialog(this, "Deseja realmente cancelar a configuração?", "Cancelar",
+                JOptionPane.YES_NO_OPTION);
+        if (opc == JOptionPane.YES_OPTION) {
+            this.dispose(); // Fecha a janela
+        }
     }
 
     private void salvarConfiguracoes() {
         String ip = txtIp1.getText() + "." + txtIp2.getText() + "." + txtIp3.getText() + "." + txtIp4.getText();
-        // Implementar a lógica para salvar ou utilizar o IP
-        // Exemplo: conectar ao banco de dados com o IP configurado
-        Connection conexao = NetworkConfig.conector();
+        Connection conexao = conector();
         if (conexao != null) {
             JOptionPane.showMessageDialog(this, "Conexão bem sucedida!");
-            // Aqui você pode fechar a janela de configuração se necessário
             dispose();
         } else {
             JOptionPane.showMessageDialog(this, "Falha ao conectar ao banco de dados.");
@@ -114,6 +138,8 @@ public class NetworkConfig extends javax.swing.JFrame {
     }
 
     @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated
+    // <editor-fold defaultstate="collapsed" desc="Generated
     // <editor-fold defaultstate="collapsed" desc="Generated
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -134,7 +160,7 @@ public class NetworkConfig extends javax.swing.JFrame {
         jLabel7 = new javax.swing.JLabel();
         txtSenha = new javax.swing.JPasswordField();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Configuração de rede ");
 
         jLabel1.setFont(new java.awt.Font("sansserif", 0, 16)); // NOI18N
@@ -187,14 +213,22 @@ public class NetworkConfig extends javax.swing.JFrame {
         });
 
         jButton2.setText("Cancelar");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
 
         jLabel6.setText("Username");
 
-        txtUser.setText("root");
+        txtUser.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtUserActionPerformed(evt);
+            }
+        });
 
         jLabel7.setText("Senha");
 
-        txtSenha.setText("root");
         txtSenha.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 txtSenhaActionPerformed(evt);
@@ -210,6 +244,14 @@ public class NetworkConfig extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel1)
                     .addComponent(jLabel2)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel6)
+                            .addComponent(jLabel7))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(txtUser)
+                            .addComponent(txtSenha, javax.swing.GroupLayout.DEFAULT_SIZE, 148, Short.MAX_VALUE)))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(txtIp1, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -229,15 +271,7 @@ public class NetworkConfig extends javax.swing.JFrame {
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 15, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(txtIp4, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel6)
-                            .addComponent(jLabel7))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(txtUser, javax.swing.GroupLayout.DEFAULT_SIZE, 148, Short.MAX_VALUE)
-                            .addComponent(txtSenha))))
+                                .addComponent(txtIp4, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                 .addContainerGap(26, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -275,19 +309,28 @@ public class NetworkConfig extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_jButton1ActionPerformed
         // TODO add your handling code here:
         salvarConfiguracoes();
 
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }// GEN-LAST:event_jButton1ActionPerformed
 
-    private void txtIp3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtIp3ActionPerformed
+    private void txtIp3ActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_txtIp3ActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_txtIp3ActionPerformed
+    }// GEN-LAST:event_txtIp3ActionPerformed
 
-    private void txtSenhaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtSenhaActionPerformed
+    private void txtSenhaActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_txtSenhaActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_txtSenhaActionPerformed
+    }// GEN-LAST:event_txtSenhaActionPerformed
+
+    private void txtUserActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_txtUserActionPerformed
+        // TODO add your handling code here:
+    }// GEN-LAST:event_txtUserActionPerformed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_jButton2ActionPerformed
+        // TODO add your handling code here:
+        cancelar();
+    }// GEN-LAST:event_jButton2ActionPerformed
 
     private void txtIp1ActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_txtIp1ActionPerformed
         // TODO add your handling code here:
